@@ -241,7 +241,8 @@ fechaToAscii:
 	colocarAnho:
 		mov ax,0
 		mov ax, [anho]
-		div word[cien]
+		mov bx, 100
+		div bx
 		call dosDigitosAAscii ;en al quedo cociente
 		mov [fechaGregoriana+6], al
 		mov [fechaGregoriana+7], ah
@@ -249,7 +250,7 @@ fechaToAscii:
 		call dosDigitosAAscii
 		mov [fechaGregoriana+8], al
 		mov [fechaGregoriana+9], ah
-	ret
+		ret
 
 dosDigitosAAscii:
 	div byte[diez]
