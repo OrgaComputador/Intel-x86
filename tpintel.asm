@@ -2,14 +2,18 @@ segment pila	 stack
 	resb 64
 
 segment datos data
-fechaGregoriana times 11 resb 1
+fechaGregoriana times 10 resb 1,
+				db 13,
+				db 10,
+				db '$'
+				
 diaGregoriano resb 1
 mesGregoriano resb 1
 anho resw 1
 anhoEsBisiesto resb 1 ;1h si es bisiesto, 0h si no.
 dias resd 1
 vecDiasMes times 3 resd 1
-msgIngSiglo db 'Ingrese el siglo correspondiente a las fechas del archivo (01-99): ','$'
+msgIngSiglo db 'Ingrese el siglo correspondiente a las fechas del archivo (01-99): ',13,10,'$'
 		db 3
 		db 0
 siglo times 3 resb 1
@@ -51,6 +55,8 @@ segment codigo code
 			call obtenerDias
 			call diaYMesEnGregoriano
 			call fechaToAscii
+			mov dx,fechaGregoriana
+			call printMsg ;muestro la fecha
 			cmp byte[anhoEsBisiesto], 01h
 			jne procesarRegistros ;antes de leer prox registro reestablezco el calendario
 			dec byte[vecDiasMes + 1]
@@ -140,9 +146,13 @@ obtenerAnho:
 	mov al, 10
 	mul bl
 	add al, bh
-	add ax, [sigloEnHexa]
-	mov [anho], ax
-	ret
+	cmp al, 0
+	jne noSumarCienAnhos
+	add al,100
+	noSumarCienAnhos:
+		add ax, [sigloEnHexa]
+		mov [anho], ax
+		ret
 	
 ;verifica si el anho del registro es bisiesto y lo guarda en la variable esBisiesto
 esBisiesto:
@@ -225,7 +235,6 @@ diaYMesEnGregoriano:
 fechaToAscii:
 	mov byte[fechaGregoriana + 2], 47
 	mov byte[fechaGregoriana + 5], 47 ;barras/moverlo a inicializaciones?
-	mov byte[fechaGregoriana + 10], '$';fin de cadena 
 	colocarDia:
 	    mov ax,0
 		mov al, [diaGregoriano]
