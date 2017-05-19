@@ -2,6 +2,7 @@ segment pila	 stack
 	resb 64
 
 segment datos data
+fechaGregoriana times 11 resb 1
 diaGregoriano resb 1
 mesGregoriano resb 1
 anho resw 1
@@ -13,6 +14,7 @@ msgIngSiglo db 'Ingrese el siglo correspondiente a las fechas del archivo (01-99
 		db 0
 siglo times 3 resb 1
 sigloEnHexa resw 1
+diez db 10
 cien db 64h ;100 expresado en base 16
 mil dw 03E8h ;1000 expresado en base 16
 fileName db "fechas",0	
@@ -48,6 +50,7 @@ segment codigo code
 		continuar:
 			call obtenerDias
 			call diaYMesEnGregoriano
+			call fechaToAscii
 			cmp byte[anhoEsBisiesto], 01h
 			jne procesarRegistros ;antes de leer prox registro reestablezco el calendario
 			dec byte[vecDiasMes + 1]
@@ -214,8 +217,45 @@ diaYMesEnGregoriano:
 		add ax, bx
 		inc si
 		mov [diaGregoriano], al
-		mov [mesGregoriano], si
+		mov bx, 0
+		add bx, si ;para mover solo un byte
+		mov [mesGregoriano], bl
 		ret
+
+fechaToAscii:
+	mov byte[fechaGregoriana + 2], 47
+	mov byte[fechaGregoriana + 5], 47 ;barras/moverlo a inicializaciones?
+	mov byte[fechaGregoriana + 10], '$';fin de cadena 
+	colocarDia:
+	    mov ax,0
+		mov al, [diaGregoriano]
+		call dosDigitosAAscii
+		mov [fechaGregoriana], al
+		mov [fechaGregoriana + 1], ah
+	colocarMes:
+		mov ax,0
+		mov al, [mesGregoriano]
+		call dosDigitosAAscii
+		mov [fechaGregoriana+3], al
+		mov [fechaGregoriana+4], ah
+	colocarAnho:
+		mov ax,0
+		mov ax, [anho]
+		div word[cien]
+		call dosDigitosAAscii ;en al quedo cociente
+		mov [fechaGregoriana+6], al
+		mov [fechaGregoriana+7], ah
+		mov ax,dx
+		call dosDigitosAAscii
+		mov [fechaGregoriana+8], al
+		mov [fechaGregoriana+9], ah
+	ret
+
+dosDigitosAAscii:
+	div byte[diez]
+	add al, 48
+	add ah, 48
+	ret
 	
 errOpen:
 	mov	dx, msjErrOpen
