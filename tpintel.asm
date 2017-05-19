@@ -2,6 +2,8 @@ segment pila	 stack
 	resb 64
 
 segment datos data
+diaGregoriano resb 1
+mesGregoriano resb 1
 anho resw 1
 anhoEsBisiesto resb 1 ;1h si es bisiesto, 0h si no.
 dias resd 1
@@ -40,11 +42,13 @@ segment codigo code
 		call leerRegistro
 		call obtenerAnho 
 		call esBisiesto
-		cmp byte[anhoBisiesto], 01h 
+		cmp byte[anhoEsBisiesto], 01h 
 		jne continuar
 		inc byte[vecDiasMes + 1]
 		continuar:
-			cmp byte[anhoBisiesto], 01h
+			call obtenerDias
+			call diaYMesEnGregoriano
+			cmp byte[anhoEsBisiesto], 01h
 			jne procesarRegistros ;antes de leer prox registro reestablezco el calendario
 			dec byte[vecDiasMes + 1]
 			jmp procesarRegistros ;loop lectura registros
@@ -170,7 +174,49 @@ esBisiesto:
 		mov byte[anhoEsBisiesto], 00h						;Define el año como un año normal poniendo 0 en el resultado
 		ret	
 
-		
+obtenerDias:
+
+	mov ax, 0
+	mov bl, [registro + 3] ;aca tengo el numero mas significativo del dia
+	mov cl, [registro + 4] ;aca tengo el segundo mas significativo
+	shl cl, 4
+	shl bl, 4
+	shr cl, 4
+	shr bl, 4 ;elimino primer nibble
+	mov al, [cien] ;p/multiplicar con el registro bl
+	mul bl
+	mov bx, ax ;lo de bx ya no lo necesito
+	mov ax, 10
+	mul cx
+	add ax, bx ;solo falta sumar al digito menos significativo
+	mov bx, 0
+	mov bl,[registro + 5]
+	shl bl, 4
+	shr bl, 4
+	add ax, bx
+	mov [dias], ax
+	ret
+
+diaYMesEnGregoriano:
+	mov si, 0 ;puntero al vector diaMes
+	mov bx, 0 ;para almacenar los dias del mes actual
+	mov ax, [dias]
+	avanzarMes:
+		mov bl, [vecDiasMes + si]
+		sub ax, bx
+		cmp ax, 0	
+		JLE diaYMesHallados
+		cmp si, 11
+		JE diaYMesHallados
+		inc si
+		jmp avanzarMes
+	diaYMesHallados: ;en si esta mes-1, y ax+bx el dia 
+		add ax, bx
+		inc si
+		mov [diaGregoriano], al
+		mov [mesGregoriano], si
+		ret
+	
 errOpen:
 	mov	dx, msjErrOpen
 	mov	ah, 9
@@ -201,3 +247,4 @@ printMsg:
 fin:
 	mov  ax, 4c00h  ; retornar al SO
 	int  21h	
+
