@@ -2,7 +2,7 @@ segment pila	 stack
 	resb 64
 
 segment datos data
-msgProcesarSiguienteRegistro db 'Presione enter para procesar el siguiente registro',13,10,'$'
+msgProcesarSiguienteRegistro db 'Presione cualquier tecla para procesar el siguiente registro',13,10,'$'
 fechaGregoriana times 10 resb 1,
 				db 13,
 				db 10,
@@ -29,8 +29,8 @@ registro times 6 resb 1
 msjErrOpen db "Error en apertura$"
 msjErrRead db "Error en lectura$"
 msjErrClose db "Error en cierre$"
-msjErrDiasInvalidos db 'No se proceso este registro. DDDD invalido (max 365 o 366 si es bisiesto)',13,10,'$'
-falseBuffer resb 1
+msjErrDiasInvalidos db 'No se proceso este registro. (0 < DDDD <= 365 (366 con anho bisiesto)',13,10,'$'
+msjFinProceso db 'Fin del procesamiento de registros',13,10,'$'
 segment codigo code
 ..start:
 	;Inicialización de registro DS y SS	
@@ -42,7 +42,6 @@ segment codigo code
 	;código de la solución al problema
 	;luego pido el siglo
 	;primero lleno el vector vecDiasMes
-	
 	call inicializarCalendario
 	call preguntarSiglo
 	call guardarSiglo
@@ -72,6 +71,8 @@ segment codigo code
 				jne procesarRegistros ;antes de leer prox registro reestablezco el calendario
 				dec byte[vecDiasMes + 1]
 				jmp procesarRegistros ;loop lectura registros
+
+
 inicializarCalendario:
     mov BYTE[vecDiasMes], 31
 	mov BYTE[vecDiasMes+1], 28
@@ -98,7 +99,7 @@ preguntarSiglo:
 validarSiglo:
     mov ax, [siglo]
 	cmp ax, 3030h
-	je preguntarSiglo ;no puede ser 0 el siglo
+	je preguntarSiglo 
 	cmp ah, 30h
 	jl preguntarSiglo
 	cmp ah, 39h
@@ -109,9 +110,8 @@ validarSiglo:
 	jg preguntarSiglo
 	ret
 	
-;cambiar esto (por ahora quedo en reg bx)
 guardarSiglo:
-    mov bx, 0 ;acumula el año 0 correspondiente al siglo ingresado
+    mov bx, 0 ;acumula el año 1 correspondiente al siglo ingresado
     mov ax, 0
 	mov al, [siglo]
 	sub al, 30h
@@ -227,6 +227,8 @@ validarCantidadDias:
 	je validarCantidadDiasBisiesto
 	cmp word[dias], 365
 	jg cantidadDiasInvalido
+	cmp word[dias], 0
+	jle cantidadDiasInvalido
 	validarCantidadDiasBisiesto:
 		cmp word[dias], 366
 		jg cantidadDiasInvalido
@@ -237,6 +239,7 @@ validarCantidadDias:
 		call printMsg
 		mov byte[cantDiasValido], 00h
 		ret
+		
 diaYMesEnGregoriano:
 	mov si, 0 ;puntero al vector diaMes
 	mov bx, 0 ;para almacenar los dias del mes actual
@@ -261,7 +264,7 @@ diaYMesEnGregoriano:
 
 fechaToAscii:
 	mov byte[fechaGregoriana + 2], 47
-	mov byte[fechaGregoriana + 5], 47 ;barras/moverlo a inicializaciones?
+	mov byte[fechaGregoriana + 5], 47 
 	colocarDia:
 	    mov ax,0
 		mov al, [diaGregoriano]
@@ -296,14 +299,14 @@ dosDigitosAAscii:
 	
 errOpen:
 	mov	dx, msjErrOpen
-	mov	ah, 9
-	int	21h
+	call printMsg
 	jmp	fin
+	
 errRead:
 	mov	dx, msjErrRead
-	mov	ah, 9
-	int	21h
+	call printMsg
 	jmp fin
+	
 closeFil:
 	;CIERRA EL ARCHIVO
 	mov	bx, [fHandle]	;bx = handle del archivo
@@ -311,17 +314,17 @@ closeFil:
 	int	21h
 	jc	errClose
 	jmp	fin
+	
 errClose:
 	mov	dx, msjErrClose
-	mov	ah, 9
-	int	21h
-	
 printMsg:
 	mov ah, 9
 	int 21h
 	ret
 	
 fin:
+	mov dx, msjFinProceso
+	call printMsg
 	mov  ax, 4c00h  ; retornar al SO
 	int  21h	
 
