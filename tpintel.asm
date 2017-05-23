@@ -15,6 +15,7 @@ anhoEsBisiesto resb 1 ;1h si es bisiesto, 0h si no.
 cantDiasValido resb 1 ;1h si el registro tiene cantidad de dias validos, 0h si no.
 dias resw 1
 vecDiasMes times 3 resd 1
+msjIngArchivo db 'Ingrese el nombre del archivo (maximo 6 caracteres): ',13,10,'$'
 msgIngSiglo db 'Ingrese el siglo correspondiente a las fechas del archivo (01-99): ',13,10,'$'
 		db 3
 		db 0
@@ -23,12 +24,14 @@ sigloEnHexa resw 1
 diez db 10
 cien db 64h ;100 expresado en base 16
 mil dw 03E8h ;1000 expresado en base 16
-fileName db "fechas",0	
+		db 7
+		db 0
+filename times 6 resb 1	
 fHandle resw 1
 registro times 6 resb 1
-msjErrOpen db "Error en apertura$"
-msjErrRead db "Error en lectura$"
-msjErrClose db "Error en cierre$"
+msjErrOpen db 'Error en apertura',13,10,'$'
+msjErrRead db 'Error en lectura',13,10,'$'
+msjErrClose db 'Error en cierre',13,10,'$'
 msjErrDiasInvalidos db 'No se proceso este registro. (0 < DDDD <= 365 (366 con anho bisiesto)',13,10,'$'
 msjFinProceso db 'Fin del procesamiento de registros',13,10,'$'
 segment codigo code
@@ -45,6 +48,7 @@ segment codigo code
 	call inicializarCalendario
 	call preguntarSiglo
 	call guardarSiglo
+	call nombreArchivo
 	call abrirArchLectura
 	procesarRegistros:	
 		call leerRegistro
@@ -91,7 +95,7 @@ inicializarCalendario:
 preguntarSiglo:
     lea dx, [msgIngSiglo]
 	call printMsg
-	lea dx, [siglo-2] ;cargo desplazamiento del buffer
+	lea dx, [siglo - 2] ;cargo desplazamiento del buffer
 	mov ah, 0ah
 	int 21h ;ingreso del siglo
 	jmp validarSiglo
@@ -125,10 +129,18 @@ guardarSiglo:
 	sub bx, 100 ;resto 100 años
 	mov [sigloEnHexa], bx
 	ret
-	
+
+nombreArchivo:
+	mov dx, msjIngArchivo
+	call printMsg
+	lea dx, [filename - 2]
+	mov ah, 0ah
+	int 21h
+	mov BYTE[filename+6], 0h
+	ret
 abrirArchLectura:
 	mov	al, 0		         ;al = tipo de acceso (0=lectura; 1=escritura; 2=lectura y escritura)
-	mov	dx, fileName	         ;dx = dir del nombre del archivo
+	mov	dx, filename	         ;dx = dir del nombre del archivo
 	mov	ah, 3dh		         ;ah = servicio para abrir archivo 3dh
 	int	21h
 	jc	errOpen
@@ -327,4 +339,3 @@ fin:
 	call printMsg
 	mov  ax, 4c00h  ; retornar al SO
 	int  21h	
-
